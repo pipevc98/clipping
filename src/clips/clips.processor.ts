@@ -26,16 +26,10 @@ export class ClipsProcessor extends WorkerHost {
     const { stdout: durationRaw } = await execAsync(`ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${videoPath}"`);
     const durationSeconds = parseFloat(durationRaw.trim());
     const durationMinutes = durationSeconds / 60;
-    const estimatedMinutes = Math.ceil(1 + durationMinutes * 0.5 + durationMinutes * 0.1);
+    const estimatedMinutes = Math.ceil(1 + durationMinutes * 0.6);
     const estimatedReadyAt = new Date(Date.now() + estimatedMinutes * 60 * 1000).toISOString();
     await job.updateProgress({ estimatedMinutes, estimatedReadyAt, durationMinutes: Math.ceil(durationMinutes) });
     console.log(`[x] Duración: ${Math.ceil(durationMinutes)} min — Estimado: ${estimatedMinutes} min`);
-
-    // 3. Transcribir audio con Whisper y generar subtítulos
-    console.log(`[x] Transcribiendo audio con Whisper...`);
-    await execAsync(`whisper "${videoPath}" --model tiny --output_format srt --output_dir /tmp`, { timeout: 1800000 });
-    const srtPath = `/tmp/${id}.srt`;
-    console.log(`[x] Subtítulos generados: ${srtPath}`);
 
     // 4. Crear carpeta para los clips
     await execAsync(`mkdir -p ${clipsDir}`);
@@ -45,12 +39,12 @@ export class ClipsProcessor extends WorkerHost {
     const readyClips: string[] = [];
     await job.updateProgress({ estimatedMinutes, estimatedReadyAt, durationMinutes: Math.ceil(durationMinutes), totalClips, readyClips });
 
-    // 6. Procesar cada clip individualmente para ir mostrando los listos
+    // 6. Procesar cada clip individualmente
     for (let i = 0; i < totalClips; i++) {
       const startSeconds = i * 60;
       const clipPath = `${clipsDir}/clip_${String(i).padStart(3, '0')}.mp4`;
       await execAsync(
-        `ffmpeg -ss ${startSeconds} -i "${videoPath}" -t 60 -vf "setpts=PTS/1.05,scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,hflip,subtitles=${srtPath}" -af "atempo=1.05" -c:v libx264 -c:a aac "${clipPath}"`,
+        `ffmpeg -ss ${startSeconds} -i "${videoPath}" -t 60 -vf "setpts=PTS/1.05,scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,hflip" -af "atempo=1.05" -c:v libx264 -c:a aac "${clipPath}"`,
         { timeout: 600000 }
       );
       readyClips.push(clipPath);
@@ -58,6 +52,6 @@ export class ClipsProcessor extends WorkerHost {
       await job.updateProgress({ estimatedMinutes, estimatedReadyAt, durationMinutes: Math.ceil(durationMinutes), totalClips, readyClips });
     }
 
-    return { status: 'completado', url, clips: readyClips };
+    return { status: 'completado', videoId: id, url, clips: readyClips };
   }
 }

@@ -3,16 +3,15 @@ import { Module } from '@nestjs/common';
 import { ClipsController } from './clips.controller';
 import { ClipsProcessor } from './clips.processor';
 import { ClipsService } from './clips.service';
+import { SubtitlesProcessor } from './subtitles.processor';
 
 @Module({
   imports: [
-    // Registramos la cola específica para este módulo
-    BullModule.registerQueue({
-      name: 'video-queue',
-    }),
+    BullModule.registerQueue({ name: 'video-queue' }),
+    BullModule.registerQueue({ name: 'subtitles-queue' }),
   ],
   controllers: [ClipsController],
-  providers: [ClipsProcessor, ClipsService],
+  providers: [ClipsProcessor, SubtitlesProcessor, ClipsService],
   exports: [ClipsService],
 })
 export class ClipsModule {}
