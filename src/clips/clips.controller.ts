@@ -1,15 +1,19 @@
 import { Body, Controller, Get, NotFoundException, Param, Post, Res, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiBody, ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
-import { existsSync } from 'fs';
+import { existsSync, unlinkSync } from 'fs';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ClipsService } from './clips.service';
 
+@ApiTags('clips')
+@ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('clips')
 export class ClipsController {
   constructor(private readonly clipsService: ClipsService) {}
 
   @Post()
+  @ApiBody({ schema: { properties: { url: { type: 'string' } } } })
   async create(@Body('url') url: string) {
     return this.clipsService.addVideoJob(url);
   }
@@ -33,6 +37,8 @@ export class ClipsController {
     if (!existsSync(filePath)) {
       throw new NotFoundException(`Clip ${filename} no encontrado`);
     }
-    res.download(filePath);
+    res.download(filePath, () => {
+      unlinkSync(filePath);
+    });
   }
 }
