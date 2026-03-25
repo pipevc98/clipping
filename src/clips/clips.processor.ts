@@ -22,14 +22,23 @@ export class ClipsProcessor extends WorkerHost {
     await execAsync(`${YTDLP} -f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/mp4" -o "${videoPath}" "${url}"`);
     console.log(`[x] Video descargado: ${videoPath}`);
 
-    // 3. Crear carpeta para los clips
+    // 3. Transcribir audio con Whisper y generar subtítulos
+    console.log(`[x] Transcribiendo audio con Whisper...`);
+    await execAsync(`whisper "${videoPath}" --model base --output_format srt --output_dir /tmp`, { timeout: 1800000 });
+    const srtPath = `/tmp/${id}.srt`;
+    console.log(`[x] Subtítulos generados: ${srtPath}`);
+
+    // 4. Crear carpeta para los clips
     await execAsync(`mkdir -p ${clipsDir}`);
 
-    // 4. Cortar en clips de 1 minuto con FFmpeg
-    await execAsync(`ffmpeg -i "${videoPath}" -c copy -map 0 -segment_time 60 -f segment -reset_timestamps 1 "${clipsDir}/clip_%03d.mp4"`);
+    // 5. Cortar en clips de 1 minuto con subtítulos, espejo y velocidad 1.05x en formato reel 9:16
+    await execAsync(
+      `ffmpeg -i "${videoPath}" -vf "setpts=PTS/1.05,scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,hflip,subtitles=${srtPath}" -af "atempo=1.05" -c:v libx264 -c:a aac -segment_time 60 -f segment -reset_timestamps 1 "${clipsDir}/clip_%03d.mp4"`,
+      { timeout: 1800000 }
+    );
     console.log(`[v] Clips generados en: ${clipsDir}`);
 
-    // 5. Listar los clips generados
+    // 6. Listar los clips generados
     const { stdout: clipList } = await execAsync(`ls ${clipsDir}`);
     const clips = clipList.trim().split('\n').map(f => `${clipsDir}/${f}`);
 
