@@ -18,23 +18,9 @@ export class ClipsController {
     return this.clipsService.addVideoJob(url);
   }
 
-  @Post(':videoId/subtitles')
-  async addSubtitles(@Param('videoId') videoId: string) {
-    return this.clipsService.addSubtitlesJob(videoId);
-  }
-
   @Get(':jobId')
   async getStatus(@Param('jobId') jobId: string) {
     const job = await this.clipsService.getJobStatus(jobId);
-    if (!job) {
-      throw new NotFoundException(`Job ${jobId} no encontrado`);
-    }
-    return job;
-  }
-
-  @Get('subtitles/:jobId')
-  async getSubtitlesStatus(@Param('jobId') jobId: string) {
-    const job = await this.clipsService.getSubtitlesJobStatus(jobId);
     if (!job) {
       throw new NotFoundException(`Job ${jobId} no encontrado`);
     }
