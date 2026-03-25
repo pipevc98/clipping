@@ -8,7 +8,18 @@ export class ClipsService {
 
   async addVideoJob(url: string) {
     const job = await this.videoQueue.add('process-video', { url });
-    return { jobId: job.id, url };
+
+    // Estimar tiempo: ~1 min descarga + 0.5 min/min de video para Whisper + FFmpeg
+    // Se actualiza con la duración real una vez que el processor la conoce
+    const estimatedMinutes = 20;
+    const estimatedAt = new Date(Date.now() + estimatedMinutes * 60 * 1000);
+
+    return {
+      jobId: job.id,
+      url,
+      estimatedMinutes,
+      estimatedReadyAt: estimatedAt.toISOString(),
+    };
   }
 
   async getJobStatus(jobId: string) {
@@ -17,6 +28,12 @@ export class ClipsService {
       return null;
     }
     const state = await job.getState();
-    return { jobId: job.id, state, data: job.data, returnValue: job.returnvalue };
+    return {
+      jobId: job.id,
+      state,
+      data: job.data,
+      progress: job.progress,
+      returnValue: job.returnvalue,
+    };
   }
 }
