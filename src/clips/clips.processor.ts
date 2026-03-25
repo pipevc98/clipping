@@ -13,7 +13,7 @@ export class ClipsProcessor extends WorkerHost {
 
     // Descarga el audio con yt-dlp y lo convierte a mp3 con FFmpeg
     const outputPath = `/tmp/%(id)s.%(ext)s`;
-    const command = `yt-dlp -x --audio-format mp3 -o "${outputPath}" "${url}"`;
+    const command = `yt-dlp --cookies /root/cookies.txt -x --audio-format mp3 -o "${outputPath}" "${url}"`;
 
     const { stdout, stderr } = await execAsync(command);
     console.log(stdout);
