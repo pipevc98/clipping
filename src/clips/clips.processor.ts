@@ -4,7 +4,7 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 
 const execAsync = promisify(exec);
-const YTDLP = 'yt-dlp --extractor-args "youtube:player_client=ios" --cookies /root/cookies.txt';
+const YTDLP = 'yt-dlp --cookies /root/cookies.txt';
 
 @Processor('video-queue')
 export class ClipsProcessor extends WorkerHost {
