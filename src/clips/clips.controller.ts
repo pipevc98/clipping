@@ -1,6 +1,10 @@
-import { Body, Controller, Get, NotFoundException, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, NotFoundException, Param, Post, Res, UseGuards } from '@nestjs/common';
+import type { Response } from 'express';
+import { existsSync } from 'fs';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ClipsService } from './clips.service';
 
+@UseGuards(JwtAuthGuard)
 @Controller('clips')
 export class ClipsController {
   constructor(private readonly clipsService: ClipsService) {}
@@ -17,5 +21,18 @@ export class ClipsController {
       throw new NotFoundException(`Job ${jobId} no encontrado`);
     }
     return job;
+  }
+
+  @Get(':videoId/clips/:filename')
+  downloadClip(
+    @Param('videoId') videoId: string,
+    @Param('filename') filename: string,
+    @Res() res: Response,
+  ) {
+    const filePath = `/tmp/${videoId}_clips/${filename}`;
+    if (!existsSync(filePath)) {
+      throw new NotFoundException(`Clip ${filename} no encontrado`);
+    }
+    res.download(filePath);
   }
 }
