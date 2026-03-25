@@ -40,17 +40,24 @@ export class ClipsProcessor extends WorkerHost {
     // 4. Crear carpeta para los clips
     await execAsync(`mkdir -p ${clipsDir}`);
 
-    // 5. Cortar en clips de 1 minuto con subtítulos, espejo y velocidad 1.05x en formato reel 9:16
-    await execAsync(
-      `ffmpeg -i "${videoPath}" -vf "setpts=PTS/1.05,scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,hflip,subtitles=${srtPath}" -af "atempo=1.05" -c:v libx264 -c:a aac -segment_time 60 -f segment -reset_timestamps 1 "${clipsDir}/clip_%03d.mp4"`,
-      { timeout: 1800000 }
-    );
-    console.log(`[v] Clips generados en: ${clipsDir}`);
+    // 5. Calcular número de clips
+    const totalClips = Math.ceil(durationSeconds / 60);
+    const readyClips: string[] = [];
+    await job.updateProgress({ estimatedMinutes, estimatedReadyAt, durationMinutes: Math.ceil(durationMinutes), totalClips, readyClips });
 
-    // 6. Listar los clips generados
-    const { stdout: clipList } = await execAsync(`ls ${clipsDir}`);
-    const clips = clipList.trim().split('\n').map(f => `${clipsDir}/${f}`);
+    // 6. Procesar cada clip individualmente para ir mostrando los listos
+    for (let i = 0; i < totalClips; i++) {
+      const startSeconds = i * 60;
+      const clipPath = `${clipsDir}/clip_${String(i).padStart(3, '0')}.mp4`;
+      await execAsync(
+        `ffmpeg -ss ${startSeconds} -i "${videoPath}" -t 60 -vf "setpts=PTS/1.05,scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,hflip,subtitles=${srtPath}" -af "atempo=1.05" -c:v libx264 -c:a aac "${clipPath}"`,
+        { timeout: 600000 }
+      );
+      readyClips.push(clipPath);
+      console.log(`[v] Clip ${i + 1}/${totalClips} listo: ${clipPath}`);
+      await job.updateProgress({ estimatedMinutes, estimatedReadyAt, durationMinutes: Math.ceil(durationMinutes), totalClips, readyClips });
+    }
 
-    return { status: 'completado', url, clips };
+    return { status: 'completado', url, clips: readyClips };
   }
 }
