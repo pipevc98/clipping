@@ -4,6 +4,7 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 
 const execAsync = promisify(exec);
+const YTDLP = 'yt-dlp --js-runtimes deno:/root/.deno/bin/deno --cookies /root/cookies.txt';
 
 @Processor('video-queue')
 export class ClipsProcessor extends WorkerHost {
@@ -12,13 +13,13 @@ export class ClipsProcessor extends WorkerHost {
     console.log(`[x] Descargando video: ${url}`);
 
     // 1. Obtener el ID del video
-    const { stdout: videoId } = await execAsync(`yt-dlp --get-id "${url}"`);
+    const { stdout: videoId } = await execAsync(`${YTDLP} --get-id "${url}"`);
     const id = videoId.trim();
     const videoPath = `/tmp/${id}.mp4`;
     const clipsDir = `/tmp/${id}_clips`;
 
     // 2. Descargar el video en mp4
-    await execAsync(`yt-dlp --cookies /root/cookies.txt -f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/mp4" -o "${videoPath}" "${url}"`);
+    await execAsync(`${YTDLP} -f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/mp4" -o "${videoPath}" "${url}"`);
     console.log(`[x] Video descargado: ${videoPath}`);
 
     // 3. Crear carpeta para los clips
