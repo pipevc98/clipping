@@ -15,9 +15,16 @@ export class ClipsProcessor extends WorkerHost {
     const outputPath = `/tmp/%(id)s.%(ext)s`;
     const command = `yt-dlp --cookies /root/cookies.txt -x --audio-format mp3 -o "${outputPath}" "${url}"`;
 
-    const { stdout, stderr } = await execAsync(command);
-    console.log(stdout);
-    if (stderr) console.error(stderr);
+    try {
+      const { stdout, stderr } = await execAsync(command);
+      console.log(stdout);
+      if (stderr) console.error(stderr);
+    } catch (error) {
+      console.error(`[!] Error al procesar el video:`, error.message);
+      console.error(`[!] stdout:`, error.stdout);
+      console.error(`[!] stderr:`, error.stderr);
+      throw error;
+    }
 
     console.log(`[v] Video procesado exitosamente: ${url}`);
     return { status: 'completado', url };
